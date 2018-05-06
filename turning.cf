@@ -44,13 +44,13 @@ coercions Stmt 1 ;
 
 -- Expressions
 
-EAss.    Exp ::= Ident "=" Exp ;
-EAddAss. Exp ::= Ident "+=" Exp ;
-ESubAss. Exp ::= Ident "-=" Exp ;
-EMulAss. Exp ::= Ident "*=" Exp ;
-EDivAss. Exp ::= Ident "/=" Exp ;
-EModAss. Exp ::= Ident "%=" Exp ;
-
+EAss.     Exp ::= Ident OpAss Exp ;
+OpAss.    OpAss ::= "=" ;
+OpAddAss. OpAss ::= "+=" ;
+OpSubAss. OpAss ::= "-=" ;
+OpMulAss. OpAss ::= "*=" ;
+OpDivAss. OpAss ::= "/=" ;
+OpModAss. OpAss ::= "%=" ;
 
 EIfte. Exp ::= Exp1 "?" Exp ":" Exp1 ;
 
@@ -58,33 +58,37 @@ EOr.  Exp1 ::= Exp1 "||" Exp2 ;
 
 EAnd. Exp2 ::= Exp2 "&&" Exp3 ;
 
-EEq.  Exp3 ::= Exp3 "==" Exp4 ;
-ENEq. Exp3 ::= Exp3 "!=" Exp4 ;
+EComp. Exp3 ::= Exp3 OpComp Exp4 ;
+OpEq.  OpComp ::= "==" ;
+OpNeq. OpComp ::= "!=" ;
 
-ELT.  Exp4 ::= Exp4 "<" Exp5 ;
-ELEq. Exp4 ::= Exp4 "<=" Exp5 ;
-EGT.  Exp4 ::= Exp4 ">" Exp5 ;
-EGEq. Exp4 ::= Exp4 ">=" Exp5 ;
+EOrd.  Exp4 ::= Exp4 OpOrd Exp5 ;
+OpLT.  OpOrd ::= "<" ;
+OpLEq. OpOrd ::= "<=" ;
+OpGT.  OpOrd ::= ">" ;
+OpGEq. OpOrd ::= ">=" ;
 
-EAdd. Exp5 ::= Exp5 "+" Exp6 ;
-ESub. Exp5 ::= Exp5 "-" Exp6 ;
+EAdd.    Exp5 ::= Exp5 OpAdd Exp6 ;
+OpPlus.  OpAdd ::= "+" ;
+OpMinus. OpAdd ::= "-" ;
 
-EMul. Exp6 ::= Exp6 "*" Exp7 ;
-EDiv. Exp6 ::= Exp6 "/" Exp7 ;
-EMod. Exp6 ::= Exp6 "%" Exp7 ;
+EMul.    Exp6 ::= Exp6 OpMul Exp7 ;
+OpTimes. OpMul ::= "*" ;
+OpDiv.   OpMul ::= "/" ;
+OpMod.   OpMul ::= "%" ;
 
-ENot. Exp7 ::= "!" Exp8 ;
-ENeg. Exp7 ::= "-" Exp8 ;
+EInv.  Exp7 ::= OpInv Exp8 ;
+OpNot. OpInv ::= "!" ;
+OpNeg. OpInv ::= "-" ;
 
 EInt.   Exp8 ::= Integer ;
 ETrue.  Exp8 ::= "true" ;
 EFalse. Exp8 ::= "false" ;
 
-EPreInc.  Exp8 ::= "++" Ident ;
-EPostInc. Exp8 ::= Ident "++" ;
-EPreDec.  Exp8 ::= "--" Ident ;
-EPostDec. Exp8 ::= Ident "--" ;
-EVar.     Exp8 ::= Ident ;
+EPreOp.  Exp8 ::= OpPrePost Ident ;
+EPostOp. Exp8 ::= Ident OpPrePost ;
+OpInc.   OpPrePost ::= "++" ;
+OpDec.   OpPrePost ::= "--" ;
 
 coercions Exp 8 ;
 

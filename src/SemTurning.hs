@@ -15,29 +15,46 @@ type Fun = [(Type, Ident)]
 
 type Store = Map Loc Val
 type Loc = Int
-data Val = VInt Int | VBool Bool
+data Val = VInt Integer | VBool Bool
+instance Show Val where
+  show (VInt i) = show i
+  show (VBool b) = show b
 
 type ContExp = Val -> Cont
 type ContDecl = Env -> Cont
 type Cont = Store -> Ans
-type Ans = IO ()
+type Ans = ExceptT String IO ()
 
-type InterMonad a = ReaderT Env (Except String) (a -> a -> (Cont, Cont))
+type Trans a = a -> a -> (Cont, Cont)
+
+type InterMonad a = Reader Env (Trans a)
 
 interpret :: Prog -> IO ()
 interpret (Prog stmt) = resultIO where
+--  resultMonad :: InterMonad Cont
+--  resultMonad = interStmt stmt `catchError` printError
+--
+--  printError :: String -> InterMonad Cont
+--  printError error = return (\_ _ -> (printErrCont, printErrCont)) where
+--    printErrCont :: Cont
+--    printErrCont = \_ -> putStrLn error
+--
+--  resultIO :: IO ()
+--  resultIO = resultCont startStore where
+--    Right trans = (runExcept $ (runReaderT resultMonad) startEnv)
+--    (_, resultCont) = trans startCont startCont
   resultMonad :: InterMonad Cont
-  resultMonad = interStmt stmt `catchError` printError
-
-  printError :: String -> InterMonad Cont
-  printError error = return (\_ _ -> (printErrCont, printErrCont)) where
-    printErrCont :: Cont
-    printErrCont = \_ -> putStrLn error
+  resultMonad = interStmt stmt
 
   resultIO :: IO ()
-  resultIO = resultCont startStore where
-    Right trans = (runExcept $ (runReaderT resultMonad) startEnv)
-    (_, resultCont) = trans startCont startCont
+  resultIO = result where
+    trans :: Trans Cont
+    trans = (runReader resultMonad) startEnv
+    resultCont :: Cont
+    resultCont = snd $ trans startCont startCont
+    resultExcept :: Ans
+    resultExcept = (resultCont startStore) `catchError` (\str -> liftIO (putStrLn str))
+    result = (runExceptT resultExcept) >> return ()
 
   startCont :: Cont
   startCont = \s -> return ()
@@ -50,77 +67,77 @@ interpret (Prog stmt) = resultIO where
 
 interStmt :: Stmt -> InterMonad Cont
 
+interStmt (SSkip) =
+  return $ \kl kr -> (kl, kr)
 
-interStmt stmt = throwError $ "Undefined yet: " ++ show stmt
+interStmt (STurn) =
+  return $ \kl kr -> (kr, kl)
+
+interStmt (SLeft stmt) = do
+  trans <- interStmt stmt
+  let newTrans kl kr = (kl', kr) where
+        (kl', _) = trans kl kr
+  return newTrans
+
+interStmt (SRight stmt) = do
+  trans <- interStmt stmt
+  let newTrans kl kr = (kl, kr') where
+        (_, kr') = trans kl kr
+  return newTrans
+
+interStmt (SSeq stmt1 stmt2) = do
+  trans1 <- interStmt stmt1
+  trans2 <- interStmt stmt2
+  let newTrans kl kr = (kl'', kr'') where
+        (kl', kr'') = trans1 kl kr'
+        (kl'', kr') = trans2 kl' kr
+  return newTrans
+
+interStmt (SPrint e) = do
+  transExp <- interExp e
+  let newTrans kl kr = transExp klExp krExp where
+        f k v s = liftIO (putStrLn $ show v) >> k s
+        klExp = f kl
+        krExp = f kr
+  return newTrans
+
+interStmt (SExp e) = do
+  transExp <- interExp e
+  let newTrans kl kr = transExp (\_ -> kl) (\_ -> kr)
+  return newTrans
+
+interStmt stmt = errMonad msg where
+  msg = "Undefined yet: " ++ show stmt
 
 
-failure :: Show a => a -> Result
-failure x = Bad $ "Undefined case: " ++ show x
+expTrans :: Val -> Trans ContExp
+expTrans v kl kr = (kl v, kr v)
 
-transIdent :: Ident -> Result
-transIdent x = case x of
-  Ident string -> failure x
-transProg :: Prog -> Result
-transProg x = case x of
-  Prog stmt -> failure x
-transDecl :: Decl -> Result
-transDecl x = case x of
-  DVal type_ ident exp -> failure x
-  DProc ident params decls stmt -> failure x
-transParam :: Param -> Result
-transParam x = case x of
-  Param type_ ident -> failure x
-transType :: Type -> Result
-transType x = case x of
-  TInt -> failure x
-  TBool -> failure x
-transStmt :: Stmt -> Result
-transStmt x = case x of
-  SSeq stmt1 stmt2 -> failure x
-  SLeft stmt -> failure x
-  SRight stmt -> failure x
-  SSkip -> failure x
-  SIf exp stmt -> failure x
-  SIfte exp stmt1 stmt2 -> failure x
-  STurn -> failure x
-  SExp exp -> failure x
-  SPrint exp -> failure x
-  SBlock decls stmt -> failure x
-  SProc ident args -> failure x
-transArg :: Arg -> Result
-transArg x = case x of
-  AVal ident -> failure x
-  ARef ident -> failure x
-transExp :: Exp -> Result
-transExp x = case x of
-  EAss ident exp -> failure x
-  EAddAss ident exp -> failure x
-  ESubAss ident exp -> failure x
-  EMulAss ident exp -> failure x
-  EDivAss ident exp -> failure x
-  EModAss ident exp -> failure x
-  EIfte exp1 exp2 exp3 -> failure x
-  EOr exp1 exp2 -> failure x
-  EAnd exp1 exp2 -> failure x
-  EEq exp1 exp2 -> failure x
-  ENEq exp1 exp2 -> failure x
-  ELT exp1 exp2 -> failure x
-  ELEq exp1 exp2 -> failure x
-  EGT exp1 exp2 -> failure x
-  EGEq exp1 exp2 -> failure x
-  EAdd exp1 exp2 -> failure x
-  ESub exp1 exp2 -> failure x
-  EMul exp1 exp2 -> failure x
-  EDiv exp1 exp2 -> failure x
-  EMod exp1 exp2 -> failure x
-  ENot exp -> failure x
-  ENeg exp -> failure x
-  EInt integer -> failure x
-  ETrue -> failure x
-  EFalse -> failure x
-  EPreInc ident -> failure x
-  EPostInc ident -> failure x
-  EPreDec ident -> failure x
-  EPostDec ident -> failure x
-  EVar ident -> failure x
+expMonad :: Val -> InterMonad ContExp
+expMonad v = return $ expTrans v
+
+
+interExp :: Exp -> InterMonad ContExp
+
+interExp (EInt i) = expMonad $ VInt i
+
+interExp (ETrue) = expMonad $ VBool True
+
+interExp (EFalse) = expMonad $ VBool False
+
+interExp e = errMonad msg where
+  msg = "Undefined yet: " ++ show e
+
+
+
+errCont :: String -> Cont
+errCont msg s = throwError msg
+
+errTrans :: String -> Trans a
+errTrans msg _ _ = (errCont msg, errCont msg)
+
+errMonad :: String -> InterMonad a
+errMonad msg = return $ errTrans msg
+
+
 

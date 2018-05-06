@@ -1,0 +1,90 @@
+comment "#" ;
+comment "//" ;
+comment "/*" "*/" ;
+
+Prog. Prog ::= Stmt ;
+
+-- Declarations
+
+DVal.  Decl  ::= Type Ident "=" Exp ;
+DProc. Decl  ::= "proc" Ident "(" [Param] ")" "{" [Decl] Stmt "}" ;
+Param. Param ::= Type Ident ;
+
+separator  Param "," ;
+terminator Decl ";" ;
+
+
+-- Types
+
+TInt.  Type ::= "int" ;
+TBool. Type ::= "bool" ;
+
+-- Statements
+
+SSeq.   Stmt ::= Stmt ";" Stmt1 ;
+
+SLeft.  Stmt1 ::= "left" Stmt1 ;
+SRight. Stmt1 ::= "right" Stmt1 ;
+
+SSkip.  Stmt1 ::= "skip" ;
+SIf.    Stmt1 ::= "if" "(" Exp ")" "{" Stmt "}" ;
+SIfte.  Stmt1 ::= "if" "(" Exp ")" "{" Stmt "}" "else" "{" Stmt "}" ;
+STurn.  Stmt1 ::= "turn" ;
+SExp.   Stmt1 ::= Exp ;
+SPrint. Stmt1 ::= "print" Exp ;
+SBlock. Stmt1 ::= "{" [Decl] Stmt "}" ;
+
+SProc. Stmt ::= Ident "(" [Arg] ")" ;
+AVal.  Arg  ::= Ident ;
+ARef.  Arg  ::= "ref" Ident ;
+
+separator Arg "," ;
+
+coercions Stmt 1 ;
+
+-- Expressions
+
+EAss.    Exp ::= Ident "=" Exp ;
+EAddAss. Exp ::= Ident "+=" Exp ;
+ESubAss. Exp ::= Ident "-=" Exp ;
+EMulAss. Exp ::= Ident "*=" Exp ;
+EDivAss. Exp ::= Ident "/=" Exp ;
+EModAss. Exp ::= Ident "%=" Exp ;
+
+
+EIfte. Exp ::= Exp1 "?" Exp ":" Exp1 ;
+
+EOr.  Exp1 ::= Exp1 "||" Exp2 ;
+
+EAnd. Exp2 ::= Exp2 "&&" Exp3 ;
+
+EEq.  Exp3 ::= Exp3 "==" Exp4 ;
+ENEq. Exp3 ::= Exp3 "!=" Exp4 ;
+
+ELT.  Exp4 ::= Exp4 "<" Exp5 ;
+ELEq. Exp4 ::= Exp4 "<=" Exp5 ;
+EGT.  Exp4 ::= Exp4 ">" Exp5 ;
+EGEq. Exp4 ::= Exp4 ">=" Exp5 ;
+
+EAdd. Exp5 ::= Exp5 "+" Exp6 ;
+ESub. Exp5 ::= Exp5 "-" Exp6 ;
+
+EMul. Exp6 ::= Exp6 "*" Exp7 ;
+EDiv. Exp6 ::= Exp6 "/" Exp7 ;
+EMod. Exp6 ::= Exp6 "%" Exp7 ;
+
+ENot. Exp7 ::= "!" Exp8 ;
+ENeg. Exp7 ::= "-" Exp8 ;
+
+EInt.   Exp8 ::= Integer ;
+ETrue.  Exp8 ::= "true" ;
+EFalse. Exp8 ::= "false" ;
+
+EPreInc.  Exp8 ::= "++" Ident ;
+EPostInc. Exp8 ::= Ident "++" ;
+EPreDec.  Exp8 ::= "--" Ident ;
+EPostDec. Exp8 ::= Ident "--" ;
+EVar.     Exp8 ::= Ident ;
+
+coercions Exp 8 ;
+

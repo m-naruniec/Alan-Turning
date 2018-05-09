@@ -4,6 +4,7 @@ import AbsTurning
 import ErrM
 import Control.Monad.Except
 import Control.Monad.Reader
+import Data.Maybe
 import qualified Data.Map as M
 
 (!) = (M.!)
@@ -141,13 +142,44 @@ interStmt (SBlock d stmt) = reader $ (\env kl kr ->
     semDecl env (fst . contDecl) (snd . contDecl))
 
 interStmt (SProc pIdent args) = do
+  transArgs <- interArgs args
+  vEnv <- asks (vEnv)
   maybeProc <- asks (M.lookup pIdent . pEnv)
   case maybeProc of
     Nothing -> errMonad $ "Procedure " ++ show pIdent ++ " not in scope"
     Just proc ->
+        let
+          newTrans :: Trans Cont
+          newTrans kl kr = transArgs (\locs -> fst $ proc locs kl kr) (\locs -> snd $ proc locs kl kr)
+        in return newTrans
+
+
+--interStmt (SProc pIdent args) = do
+--  vEnv <- asks (vEnv)
+--  maybeProc <- asks (M.lookup pIdent . pEnv)
+--  case maybeProc of
+--    Nothing -> errMonad $ "Procedure " ++ show pIdent ++ " not in scope"
+--    Just proc -> let
+--        maybeLocs = getMaybeLoc <$> args
+--        failedLocs = filter ((== Nothing) . snd) (zip args maybeLocs)
+--        getMaybeLoc (AVal
+--      in
+--        if (failedLocs == [])
+--          then return $ proc $ map fromJust maybeLocs
+--          else errMonad $ "Variables " ++ show (map (\(ARef v, _) -> v) failedLocs) ++ " not in scope"
+--
+
+
 
 interStmt stmt = errMonad msg where
   msg = "Undefined yet: " ++ show stmt
+
+                    --Reader Env (([Loc] -> Cont) -> ([Loc] -> Cont) -> (Cont, Cont))
+interArgs :: [Arg] -> InterMonad ([Loc] -> Cont)
+interArgs [] = do
+  let newTrans kl kr = (kl [], kr [])
+  return newTrans
+
 
 interDecl :: Decl -> InterMonad ContDecl
 
@@ -237,7 +269,7 @@ dflt TBool = VBool False
 
 
 errCont :: String -> Cont
-errCont msg s = throwError msg
+errCont msg s = throwError $ "[ERROR] " ++ msg
 
 errTrans :: String -> Trans a
 errTrans msg _ _ = (errCont msg, errCont msg)

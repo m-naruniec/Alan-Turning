@@ -2,12 +2,13 @@ comment "#" ;
 comment "//" ;
 comment "/*" "*/" ;
 
-Prog. Prog ::= Stmt ;
+Prog. Prog ::= Stmt ; --ok
 
 -- Declarations
 
-DVal.  Decl  ::= Type Ident "=" Exp ;
-DProc. Decl  ::= "proc" Ident "(" [Param] ")" "{" [Decl] Stmt "}" ;
+DDflt. Decl  ::= Type Ident ; --ok
+--DVal.  Decl  ::= Type Ident "=" Exp ;
+DProc. Decl  ::= "proc" Ident "(" [Param] ")" "{" Stmt "}" ;
 Param. Param ::= Type Ident ;
 
 separator  Param "," ;
@@ -21,21 +22,21 @@ TBool. Type ::= "bool" ;
 
 -- Statements
 
-SSeq.   Stmt ::= Stmt ";" Stmt1 ;
+SSeq.   Stmt ::= Stmt ";" Stmt1 ; --ok
 
-SLeft.  Stmt1 ::= "left" Stmt1 ;
-SRight. Stmt1 ::= "right" Stmt1 ;
+SLeft.  Stmt1 ::= "left" Stmt1 ; --ok
+SRight. Stmt1 ::= "right" Stmt1 ; --ok
 
-SSkip.  Stmt1 ::= "skip" ;
-SIf.    Stmt1 ::= "if" "(" Exp ")" "{" Stmt "}" ;
-SIfte.  Stmt1 ::= "if" "(" Exp ")" "{" Stmt "}" "else" "{" Stmt "}" ;
-STurn.  Stmt1 ::= "turn" ;
-SExp.   Stmt1 ::= Exp ;
-SPrint. Stmt1 ::= "print" Exp ;
-SBlock. Stmt1 ::= "{" [Decl] Stmt "}" ;
+SSkip.  Stmt1 ::= "skip" ; --ok
+SIf.    Stmt1 ::= "if" "(" Exp ")" "{" Stmt "}" ; --ok
+SIfte.  Stmt1 ::= "if" "(" Exp ")" "{" Stmt "}" "else" "{" Stmt "}" ; --ok
+STurn.  Stmt1 ::= "turn" ; --ok
+SExp.   Stmt1 ::= Exp ; --ok
+SPrint. Stmt1 ::= "print" Exp ; --ok
+SBlock. Stmt1 ::= "{" Decl Stmt "}" ;
 
-SProc. Stmt ::= Ident "(" [Arg] ")" ;
-AVal.  Arg  ::= Ident ;
+SProc. Stmt1 ::= Ident "(" [Arg] ")" ;
+AVal.  Arg  ::= Exp ;
 ARef.  Arg  ::= "ref" Ident ;
 
 separator Arg "," ;
@@ -77,18 +78,19 @@ OpTimes. OpMul ::= "*" ;
 OpDiv.   OpMul ::= "/" ;
 OpMod.   OpMul ::= "%" ;
 
-EInv.  Exp7 ::= OpInv Exp8 ;
-OpNot. OpInv ::= "!" ;
-OpNeg. OpInv ::= "-" ;
+EInv.  Exp7 ::= OpInv Exp8 ; --ok
+OpNot. OpInv ::= "!" ; --ok
+OpNeg. OpInv ::= "-" ; --ok
 
-EInt.   Exp8 ::= Integer ;
-ETrue.  Exp8 ::= "true" ;
-EFalse. Exp8 ::= "false" ;
+EVar.   Exp8 ::= Ident ; --ok
+EInt.   Exp8 ::= Integer ; --ok
+ETrue.  Exp8 ::= "true" ; --ok
+EFalse. Exp8 ::= "false" ; --ok
 
-EPreOp.  Exp8 ::= OpPrePost Ident ;
-EPostOp. Exp8 ::= Ident OpPrePost ;
-OpInc.   OpPrePost ::= "++" ;
-OpDec.   OpPrePost ::= "--" ;
+EPreOp.  Exp8 ::= OpPrePost Ident ; --ok
+EPostOp. Exp8 ::= Ident OpPrePost ; --ok
+OpInc.   OpPrePost ::= "++" ; --ok
+OpDec.   OpPrePost ::= "--" ; --ok
 
 coercions Exp 8 ;
 

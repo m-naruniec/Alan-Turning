@@ -5,6 +5,7 @@ import ErrM
 import Control.Monad.Except
 import Control.Monad.Reader
 import Data.Maybe
+import Data.Tuple
 import qualified Data.Map as M
 
 (!) = (M.!)
@@ -16,18 +17,36 @@ type PEnv = M.Map Ident Proc
 type VEnv = M.Map Ident Loc
 data Env = Env {pEnv :: PEnv, vEnv :: VEnv}
 
-type Proc = [Loc] -> Trans Cont
+type Proc = [Loc] -> Trans ContPair
 
 type Store = M.Map Loc Val
 type Loc = Integer
-data Val = VInt Integer | VBool Bool
+data Val = VInt Integer | VBool Bool deriving (Eq, Ord)
 instance Show Val where
   show (VInt i) = show i
   show (VBool b) = show b
-(+?) :: Val -> Integer -> Val
-(VInt i1) +? i2 = VInt (i1 + i2)
-(-?) :: Val -> Integer -> Val
-(VInt i1) -? i2 = VInt (i1 - i2)
+
+(+?) :: Val -> Val -> Val
+(VInt i1) +? (VInt i2) = VInt (i1 + i2)
+
+(-?) :: Val -> Val -> Val
+(VInt i1) -? (VInt i2) = VInt (i1 - i2)
+
+(*?) :: Val -> Val -> Val
+(VInt i1) *? (VInt i2) = VInt (i1 * i2)
+
+(/?) :: Val -> Val -> Val
+(VInt i1) /? (VInt i2) = VInt (i1 `div` i2)
+
+(%?) :: Val -> Val -> Val
+(VInt i1) %? (VInt i2) = VInt (i1 `mod` i2)
+
+(&&?) :: Val -> Val -> Val
+(VBool b1) &&? (VBool b2) = VBool (b1 && b2)
+
+(||?) :: Val -> Val -> Val
+(VBool b1) ||? (VBool b2) = VBool (b1 || b2)
+
 
 newLocKey :: Loc
 newLocKey = (-1)
@@ -49,28 +68,31 @@ alloc val s = (newLoc, s'') where
   (newLoc, s') = postIncNewLoc s
   s'' = M.insert newLoc val s'
 
-type ContExp = Val -> Cont
-type ContDecl = Env -> Cont
+type ContPairExp = Val -> ContPair
+type ContPairDecl = Env -> ContPair
+type ContPair = (Cont, Cont)
 type Cont = Store -> Ans
 type Ans = ExceptT String IO Store -- FIXME
 
-type Trans a = a -> a -> (Cont, Cont)
+type Trans a = a -> ContPair
 
 type InterMonad a = Reader Env (Trans a)
 
+-- TODO remove test structures
 interpret :: Prog -> IO ()
 interpret (Prog stmt) = resultIO where
-  resultMonad :: InterMonad Cont
+  resultMonad :: InterMonad ContPair
   resultMonad = interStmt stmt
 
   resultIO :: IO ()
   resultIO = result where
-    trans :: Trans Cont
-    trans = (runReader resultMonad) startEnv
+    trans :: Trans ContPair
+    trans = (runReader resultMonad) testStartEnv
     resultCont :: Cont
-    resultCont = snd $ trans startCont startCont
+    resultCont = snd $ trans (startCont, startCont)
     resultExcept :: Ans
-    resultExcept = (resultCont startStore) `catchError` (\str -> liftIO (putStrLn str >> return startStore))
+    resultExcept = (resultCont testStartStore) `catchError` errorHandler
+    errorHandler str = liftIO (putStrLn str >> return testStartStore)
     result = (runExceptT resultExcept) >> return ()
 
   startCont :: Cont
@@ -82,200 +104,223 @@ interpret (Prog stmt) = resultIO where
   startEnv :: Env
   startEnv = Env M.empty M.empty
 
-interStmt :: Stmt -> InterMonad Cont
+  testStartStore :: Store
+  testStartStore = M.insert (-2) (VInt 42) startStore
 
-interStmt (SSkip) =
-  return $ \kl kr -> (kl, kr)
+  testStartEnv :: Env
+  testStartEnv = Env (pEnv startEnv) (M.insert (Ident "test") (-2) $ vEnv startEnv)
 
-interStmt (STurn) =
-  return $ \kl kr -> (kr, kl)
+interStmt :: Stmt -> InterMonad ContPair
+
+interStmt (SSkip) = return id
+
+interStmt (STurn) = return swap
 
 interStmt (SLeft stmt) = do
   trans <- interStmt stmt
-  let newTrans kl kr = (kl', kr) where
-        (kl', _) = trans kl kr
+  let newTrans (kl, kr) = (kl', kr) where
+        (kl', _) = trans (kl, kr)
   return newTrans
 
 interStmt (SRight stmt) = do
   trans <- interStmt stmt
-  let newTrans kl kr = (kl, kr') where
-        (_, kr') = trans kl kr
+  let newTrans (kl, kr) = (kl, kr') where
+        (_, kr') = trans (kl, kr)
   return newTrans
 
 interStmt (SSeq stmt1 stmt2) = do
   trans1 <- interStmt stmt1
   trans2 <- interStmt stmt2
-  let newTrans kl kr = (kl'', kr'') where
-        (kl', kr'') = trans1 kl kr'
-        (kl'', kr') = trans2 kl' kr
+  let newTrans (kl, kr) = (kl'', kr'') where
+        (kl', kr'') = trans1 (kl, kr')
+        (kl'', kr') = trans2 (kl', kr)
   return newTrans
 
 interStmt (SPrint e) = do
   transExp <- interExp e
-  let newTrans kl kr = transExp klExp krExp where
-        f k v s = liftIO (putStrLn $ show v) >> k s
-        klExp = f kl
-        krExp = f kr
+  let newTrans (kl, kr) = transExp kpExp where
+        kpExp val = (newCont kl, newCont kr) where
+          newCont k s = liftIO (putStrLn $ show val) >> k s
   return newTrans
 
 interStmt (SExp e) = do
   transExp <- interExp e
-  let newTrans kl kr = transExp (\_ -> kl) (\_ -> kr)
-  return newTrans
+  return $ (\kp -> transExp (\_ -> kp))
 
 interStmt (SIfte e stmt1 stmt2) = do
   transExp <- interExp e
   trans1 <- interStmt stmt1
   trans2 <- interStmt stmt2
-  let newTrans kl kr = transExp (fst . contExp) (snd . contExp) where
-        contExp (VBool val) = if val then trans1 kl kr else trans2 kl kr
+  let newTrans kp = transExp kExp where
+        kExp (VBool val) = if val then trans1 kp else trans2 kp
   return newTrans
 
 interStmt (SIf e stmt1) = interStmt (SIfte e stmt1 SSkip)
 
-interStmt (SBlock d stmt) = reader $ (\env kl kr ->
+interStmt (SBlock d stmt) = reader $ \env kp ->
   let
     semDecl = runReader $ interDecl d
     semStmt = runReader $ interStmt stmt
-    contDecl env' = semStmt env' kl kr
   in
-    semDecl env (fst . contDecl) (snd . contDecl))
+    semDecl env $ \env' -> semStmt env' kp
 
 interStmt (SProc pIdent args) = do
   transArgs <- interArgs args
   vEnv <- asks (vEnv)
   maybeProc <- asks (M.lookup pIdent . pEnv)
   case maybeProc of
-    Nothing -> errMonad $ "Procedure " ++ show pIdent ++ " not in scope"
+    Nothing -> procErrMonad pIdent
     Just proc ->
         let
-          newTrans :: Trans Cont
-          newTrans kl kr = transArgs (\locs -> fst $ proc locs kl kr) (\locs -> snd $ proc locs kl kr)
+          newTrans :: Trans ContPair
+          newTrans kp = transArgs (\locs -> (newCont fst locs, newCont snd locs)) where
+            newCont selector locs = selector $ proc locs kp
         in return newTrans
 
+interArgs :: [Arg] -> InterMonad ([Loc] -> ContPair)
+interArgs [] = return (\kpLocs -> kpLocs [])
 
---interStmt (SProc pIdent args) = do
---  vEnv <- asks (vEnv)
---  maybeProc <- asks (M.lookup pIdent . pEnv)
---  case maybeProc of
---    Nothing -> errMonad $ "Procedure " ++ show pIdent ++ " not in scope"
---    Just proc -> let
---        maybeLocs = getMaybeLoc <$> args
---        failedLocs = filter ((== Nothing) . snd) (zip args maybeLocs)
---        getMaybeLoc (AVal
---      in
---        if (failedLocs == [])
---          then return $ proc $ map fromJust maybeLocs
---          else errMonad $ "Variables " ++ show (map (\(ARef v, _) -> v) failedLocs) ++ " not in scope"
---
+interArgs ((ARef v):t) = do
+  transArgs <- interArgs t
+  mLoc <- asks $ M.lookup v . vEnv
+  case mLoc of
+    Nothing -> varErrMonad v
+    Just loc ->
+      let
+        newTrans kpLocs = transArgs (\locs -> kpLocs (loc:locs))
+      in
+        return newTrans
 
-
-
-interStmt stmt = errMonad msg where
-  msg = "Undefined yet: " ++ show stmt
-
-                    --Reader Env (([Loc] -> Cont) -> ([Loc] -> Cont) -> (Cont, Cont))
-interArgs :: [Arg] -> InterMonad ([Loc] -> Cont)
-interArgs [] = do
-  let newTrans kl kr = (kl [], kr [])
+interArgs ((AVal e):t) = do
+  transArgs <- interArgs t
+  transExp <- interExp e
+  let newTrans kpLocs = transExp (\val ->
+        let
+          contArgs locs = (newCont fst, newCont snd) where
+            newCont selector s = selector (kpLocs (loc:locs)) s' where
+              (loc, s') = alloc val s
+        in
+          transArgs contArgs)
   return newTrans
 
+interDecl :: Decl -> InterMonad ContPairDecl
 
-interDecl :: Decl -> InterMonad ContDecl
-
--- todo refactor
-interDecl (DProc pIdent params stmt) = reader $ (\(Env pEnv vEnv) klD krD ->
+interDecl (DProc pIdent params stmt) = reader $ \(Env pEnv vEnv) kpD ->
   let
     semStmt = runReader $ interStmt stmt
-    resPEnv = M.insert pIdent (proc resEnv) pEnv
+    resPEnv = M.insert pIdent proc pEnv
     resEnv = Env resPEnv vEnv
-    proc (Env pEnv' vEnv') locs =
+    proc locs =
       let
         l = zip params locs
-        vEnv'' = foldl f vEnv' l
-        f vEnvArg (Param _ v, loc) = M.insert v loc vEnvArg
+        vEnv' = foldl f vEnv l
+        f vEnvAcc (Param _ v, loc) = M.insert v loc vEnvAcc
       in
-        semStmt (Env pEnv' vEnv'')
+        semStmt (Env resPEnv vEnv')
   in
-    (klD resEnv, krD resEnv))
+    kpD resEnv
 
+interDecl (DDflt t v) = interDecl $ DVal t v (dfltExp t)
 
-interDecl (DDflt t v) = do
+interDecl (DVal _ v e) = do
+  transExp <- interExp e
   Env pEnv vEnv <- ask
-  let newTrans kl kr = (newCont kl, newCont kr) where
-        newCont k s = k env' s' where
-          (newLoc, s') = alloc (dflt t) s
-          env' = Env pEnv (M.insert v newLoc vEnv)
+  let newTrans kpD = transExp contExp where
+        contExp val = (newCont fst, newCont snd) where
+          newCont selector s = selector (kpD env') s' where
+            (newLoc, s') = alloc val s
+            env' = Env pEnv (M.insert v newLoc vEnv)
   return newTrans
 
-interDecl d = errMonad msg where
-  msg = "Undefined yet: " ++ show d
+interDecl (DSeq d1 d2) = reader $ \env kp ->
+  let
+    semDecl1 = runReader $ interDecl d1
+    semDecl2 = runReader $ interDecl d2
+  in
+    semDecl1 env (\env' -> semDecl2 env' kp)
 
 
-interExp :: Exp -> InterMonad ContExp
+one :: Val
+one = VInt 1
 
-interExp (EInt i) = expMonad $ VInt i
+interExp :: Exp -> InterMonad ContPairExp
 
-interExp (ETrue) = expMonad $ VBool True
+interExp (EInt i) = return $ (\kp -> kp $ VInt i)
 
-interExp (EFalse) = expMonad $ VBool False
+interExp (ETrue) = return $ (\kp -> kp $ VBool True)
 
-interExp (EVar v) = identOp id id v
+interExp (EFalse) = return $ (\kp -> kp $ VBool False)
 
-interExp (EPreOp op v) = identOp f f v where
+interExp (EVar v) = identExp id id v
+
+interExp (EPreOp op v) = identExp f f v where
   f = case op of
-    OpInc -> (+? 1)
-    OpDec -> (-? 1)
+    OpInc -> (+? one)
+    OpDec -> (-? one)
 
-interExp (EPostOp v op) = identOp id f v where
+interExp (EPostOp v op) = identExp id f v where
   f = case op of
-    OpInc -> (+? 1)
-    OpDec -> (-? 1)
+    OpInc -> (+? one)
+    OpDec -> (-? one)
+
+-- moze za pomoca identExp?
+--interExp (EAss v op e) = do
+--  transExp <- interExp e
+--  mLoc <- asks (M.lookup v)
+--  case mLoc of
+--    Nothing -> varErrMonad
+--    Just loc ->
+--      let
+--        newTrans kp = (newCont fst, newCont snd) where
+--        contExp rightVal = (\s ->
+--          let oldVal = (s ! v)
+--          in
+
 
 interExp (EInv op e) = do
   transExp <- interExp e
-  let newTrans kl kr = transExp (newCont kl) (newCont kr) where
-        newCont k (VInt val) = k (VInt (-val))
-        newCont k (VBool val) = k (VBool (not val))
+  let newTrans kp = transExp newCont where
+        newCont (VInt val) = kp (VInt (-val))
+        newCont (VBool val) = kp (VBool (not val))
   return newTrans
 
 interExp e = errMonad msg where
   msg = "Undefined yet: " ++ show e
 
-identOp :: (Val -> Val) -> (Val -> Val) -> Ident -> InterMonad ContExp
-identOp resultChange storeChange v = do
-  maybeLoc <- asks (M.lookup v . vEnv)
-  case maybeLoc of
-    Nothing -> errMonad $ "Variable " ++ (ident v) ++ " not in scope"
+identExp :: (Val -> Val) -> (Val -> Val) -> Ident -> InterMonad ContPairExp
+identExp resultChange storeChange v = do
+  mLoc <- asks (M.lookup v . vEnv)
+  case mLoc of
+    Nothing -> varErrMonad v
     Just loc -> let
-        newTrans kl kr = (newCont kl, newCont kr)
-        newCont k s = k res s' where
-          val = s ! loc
-          s' = M.insert loc (storeChange val) s
-          res = resultChange val
+        newTrans kp = (newCont fst, newCont snd) where
+          newCont selector s = selector (kp res) s' where
+            val = s ! loc
+            s' = M.insert loc (storeChange val) s
+            res = resultChange val
       in
         return newTrans
 
-expTrans :: Val -> Trans ContExp
-expTrans v kl kr = (kl v, kr v)
-
-expMonad :: Val -> InterMonad ContExp
-expMonad v = return $ expTrans v
-
-dflt :: Type -> Val
-dflt TInt = VInt 0
-dflt TBool = VBool False
-
+dfltExp :: Type -> Exp
+dfltExp TInt = EInt 0
+dfltExp TBool = EFalse
 
 
 errCont :: String -> Cont
 errCont msg s = throwError $ "[ERROR] " ++ msg
 
 errTrans :: String -> Trans a
-errTrans msg _ _ = (errCont msg, errCont msg)
+errTrans msg _ = (errCont msg, errCont msg)
 
 errMonad :: String -> InterMonad a
 errMonad msg = return $ errTrans msg
 
+scopeErrMonad :: String -> InterMonad a
+scopeErrMonad str = errMonad $ str ++ " not in scope"
 
+varErrMonad :: Ident -> InterMonad a
+varErrMonad v = scopeErrMonad $ "Variable " ++ ident v
+
+procErrMonad :: Ident -> InterMonad a
+procErrMonad p = scopeErrMonad $ "Procedure " ++ ident p
 

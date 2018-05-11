@@ -2,18 +2,19 @@ comment "#" ;
 comment "//" ;
 comment "/*" "*/" ;
 
-Prog. Prog ::= Stmt ; --ok
+Prog. Prog ::= Stmt ";" ; --ok
 
 -- Declarations
 
-DDflt. Decl  ::= Type Ident ; --ok
---DVal.  Decl  ::= Type Ident "=" Exp ;
-DProc. Decl  ::= "proc" Ident "(" [Param] ")" "{" Stmt "}" ;
-Param. Param ::= Type Ident ;
+DSeq.  Decl  ::= Decl ";" Decl1; --ok
+DDflt. Decl1  ::= Type Ident ; --ok
+DVal.  Decl1  ::= Type Ident "=" Exp ; --ok
+DProc. Decl1  ::= "proc" Ident "(" [Param] ")" "{" Stmt ";" "}" ; --ok
+Param. Param ::= Type Ident ; --ok
 
 separator  Param "," ;
-terminator Decl ";" ;
 
+coercions Decl 1 ;
 
 -- Types
 
@@ -28,16 +29,16 @@ SLeft.  Stmt1 ::= "left" Stmt1 ; --ok
 SRight. Stmt1 ::= "right" Stmt1 ; --ok
 
 SSkip.  Stmt1 ::= "skip" ; --ok
-SIf.    Stmt1 ::= "if" "(" Exp ")" "{" Stmt "}" ; --ok
-SIfte.  Stmt1 ::= "if" "(" Exp ")" "{" Stmt "}" "else" "{" Stmt "}" ; --ok
+SIf.    Stmt1 ::= "if" "(" Exp ")" "{" Stmt ";" "}" ; --ok
+SIfte.  Stmt1 ::= "if" "(" Exp ")" "{" Stmt ";" "}" "else" "{" Stmt ";" "}" ; --ok
 STurn.  Stmt1 ::= "turn" ; --ok
 SExp.   Stmt1 ::= Exp ; --ok
 SPrint. Stmt1 ::= "print" Exp ; --ok
-SBlock. Stmt1 ::= "{" Decl Stmt "}" ;
+SBlock. Stmt1 ::= "{" Decl ":" Stmt ";" "}" ; --ok
 
-SProc. Stmt1 ::= Ident "(" [Arg] ")" ;
-AVal.  Arg  ::= Exp ;
-ARef.  Arg  ::= "ref" Ident ;
+SProc. Stmt1 ::= Ident "(" [Arg] ")" ; --ok
+AVal.  Arg  ::= Exp ; --ok
+ARef.  Arg  ::= "ref" Ident ; --ok
 
 separator Arg "," ;
 

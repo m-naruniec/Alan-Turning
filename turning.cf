@@ -2,7 +2,8 @@ comment "#" ;
 comment "//" ;
 comment "/*" "*/" ;
 
-Prog. Prog ::= Stmt ";" ; --ok
+Prog. Prog ::= Stmt ;
+Prog. Prog ::= Stmt ";" ;
 
 -- Declarations
 
@@ -56,28 +57,28 @@ OpModAss. OpAss ::= "%=" ;
 
 EIfte. Exp ::= Exp1 "?" Exp ":" Exp1 ;
 
-EOr.  Exp1 ::= Exp1 "||" Exp2 ;
+EOr.  Exp1 ::= Exp1 "||" Exp2 ; --ok
 
-EAnd. Exp2 ::= Exp2 "&&" Exp3 ;
+EAnd. Exp2 ::= Exp2 "&&" Exp3 ; --ok
 
-EComp. Exp3 ::= Exp3 OpComp Exp4 ;
-OpEq.  OpComp ::= "==" ;
-OpNeq. OpComp ::= "!=" ;
+EComp. Exp3 ::= Exp3 OpComp Exp4 ; --ok
+OpEq.  OpComp ::= "==" ; --ok
+OpNq. OpComp ::= "!=" ; --ok
 
-EOrd.  Exp4 ::= Exp4 OpOrd Exp5 ;
-OpLT.  OpOrd ::= "<" ;
-OpLEq. OpOrd ::= "<=" ;
-OpGT.  OpOrd ::= ">" ;
-OpGEq. OpOrd ::= ">=" ;
+EOrd.  Exp4 ::= Exp4 OpOrd Exp5 ; --ok
+OpLT.  OpOrd ::= "<" ; --ok
+OpLEq. OpOrd ::= "<=" ; --ok
+OpGT.  OpOrd ::= ">" ; --ok
+OpGEq. OpOrd ::= ">=" ; --ok
 
-EAdd.    Exp5 ::= Exp5 OpAdd Exp6 ;
-OpPlus.  OpAdd ::= "+" ;
-OpMinus. OpAdd ::= "-" ;
+EAdd.    Exp5 ::= Exp5 OpAdd Exp6 ; --ok
+OpPlus.  OpAdd ::= "+" ; --ok
+OpMinus. OpAdd ::= "-" ; --ok
 
-EMul.    Exp6 ::= Exp6 OpMul Exp7 ;
-OpTimes. OpMul ::= "*" ;
-OpDiv.   OpMul ::= "/" ;
-OpMod.   OpMul ::= "%" ;
+EMul.    Exp6 ::= Exp6 OpMul Exp7 ; --ok
+OpTimes. OpMul ::= "*" ; --ok
+OpDiv.   OpMul ::= "/" ; --ok
+OpMod.   OpMul ::= "%" ; --ok
 
 EInv.  Exp7 ::= OpInv Exp8 ; --ok
 OpNot. OpInv ::= "!" ; --ok

@@ -239,9 +239,14 @@ interDecl (DSeq d1 d2) = reader $ \env kp ->
   in
     semDecl1 env (\env' -> semDecl2 env' kp)
 
-
 one :: Val
 one = VInt 1
+
+zero :: Val
+zero = VInt 0
+
+valPred :: (Val -> Val -> Bool) -> (Val -> Val -> Val)
+valPred f = curry $ VBool . (uncurry f)
 
 interExp :: Exp -> InterMonad ContPairExp
 
@@ -263,6 +268,44 @@ interExp (EPostOp v op) = identExp id f v where
     OpInc -> (+? one)
     OpDec -> (-? one)
 
+--interExp (EAdd e1 op e2) = reader $ \env kpE ->
+--  let
+--    semExp1 = runReader $ interExp e1
+--    semExp2 = runReader $ interExp e2
+--    f = case op of
+--      OpPlus -> (+?)
+--      OpMinus -> (-?)
+--  in
+--    semExp1 env (\val1 -> semExp2 env (\val2 -> kpE (f val1 val2)))
+
+interExp (EAdd e1 op e2) = binOpExp False f e1 e2 where
+  f = case op of
+    OpPlus -> (+?)
+    OpMinus -> (-?)
+
+interExp (EMul e1 OpTimes e2) = binOpExp False (*?) e1 e2
+
+interExp (EMul e1 op e2) = binOpExp True f e1 e2 where
+  f = case op of
+    OpDiv -> (/?)
+    OpMod -> (%?)
+
+interExp (EOr e1 e2) = binOpExp False (||?) e1 e2
+
+interExp (EAnd e1 e2) = binOpExp False (&&?) e1 e2
+
+interExp (EComp e1 op e2) = binOpExp False (valPred f) e1 e2 where
+  f = case op of
+    OpEq -> (==)
+    OpNEq -> (/=)
+
+interExp (EOrd e1 op e2) = binOpExp False (valPred f) e1 e2 where
+  f = case op of
+    OpLT -> (<)
+    OpLEq -> (<=)
+    OpGT -> (>)
+    OpGEq -> (>=)
+
 -- moze za pomoca identExp?
 --interExp (EAss v op e) = do
 --  transExp <- interExp e
@@ -271,7 +314,7 @@ interExp (EPostOp v op) = identExp id f v where
 --    Nothing -> varErrMonad
 --    Just loc ->
 --      let
---        newTrans kp = (newCont fst, newCont snd) where
+--        newTrans val kp = (newCont fst, newCont snd) where
 --        contExp rightVal = (\s ->
 --          let oldVal = (s ! v)
 --          in
@@ -286,6 +329,12 @@ interExp (EInv op e) = do
 
 interExp e = errMonad msg where
   msg = "Undefined yet: " ++ show e
+
+binOpExp :: Bool -> (Val -> Val -> Val) -> Exp -> Exp -> InterMonad ContPairExp
+binOpExp check f e1 e2 = do
+  transExp1 <- interExp e1
+  transExp2 <- interExp e2
+  return $ (\kpE -> transExp1 (\val1 -> transExp2 (\val2 -> if (check && val2 == zero) then errTrans "Division by zero in " kpE else kpE (f val1 val2))))
 
 identExp :: (Val -> Val) -> (Val -> Val) -> Ident -> InterMonad ContPairExp
 identExp resultChange storeChange v = do

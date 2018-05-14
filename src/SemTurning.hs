@@ -2,6 +2,7 @@ module SemTurning where
 
 import AbsTurning
 import ErrM
+import PrintTurning
 import Control.Monad.Except
 import Control.Monad.Reader
 import Data.Maybe
@@ -72,7 +73,7 @@ type ContPairExp = Val -> ContPair
 type ContPairDecl = Env -> ContPair
 type ContPair = (Cont, Cont)
 type Cont = Store -> Ans
-type Ans = ExceptT String IO Store -- FIXME
+type Ans = ExceptT String IO () -- FIXME
 
 type Trans a = a -> ContPair
 
@@ -92,11 +93,11 @@ interpret (Prog stmt) = resultIO where
     resultCont = snd $ trans (startCont, startCont)
     resultExcept :: Ans
     resultExcept = (resultCont testStartStore) `catchError` errorHandler
-    errorHandler str = liftIO (putStrLn str >> return testStartStore)
+    errorHandler str = liftIO (putStrLn str)
     result = (runExceptT resultExcept) >> return ()
 
   startCont :: Cont
-  startCont = \s -> return s
+  startCont _ = return ()
 
   startStore :: Store
   startStore = M.fromList [(newLocKey, VInt 0)]
@@ -268,56 +269,65 @@ interExp (EPostOp v op) = identExp id f v where
     OpInc -> (+? one)
     OpDec -> (-? one)
 
---interExp (EAdd e1 op e2) = reader $ \env kpE ->
---  let
---    semExp1 = runReader $ interExp e1
---    semExp2 = runReader $ interExp e2
---    f = case op of
---      OpPlus -> (+?)
---      OpMinus -> (-?)
---  in
---    semExp1 env (\val1 -> semExp2 env (\val2 -> kpE (f val1 val2)))
-
-interExp (EAdd e1 op e2) = binOpExp False f e1 e2 where
+interExp e@(EAdd e1 op e2) = binOpExp False f e e1 e2 where
   f = case op of
     OpPlus -> (+?)
     OpMinus -> (-?)
 
-interExp (EMul e1 OpTimes e2) = binOpExp False (*?) e1 e2
+interExp e@(EMul e1 OpTimes e2) = binOpExp False (*?) e e1 e2
 
-interExp (EMul e1 op e2) = binOpExp True f e1 e2 where
+interExp e@(EMul e1 op e2) = binOpExp True f e e1 e2 where
   f = case op of
     OpDiv -> (/?)
     OpMod -> (%?)
 
-interExp (EOr e1 e2) = binOpExp False (||?) e1 e2
+interExp e@(EOr e1 e2) = binOpExp False (||?) e e1 e2
 
-interExp (EAnd e1 e2) = binOpExp False (&&?) e1 e2
+interExp e@(EAnd e1 e2) = binOpExp False (&&?) e e1 e2
 
-interExp (EComp e1 op e2) = binOpExp False (valPred f) e1 e2 where
+interExp e@(EComp e1 op e2) = binOpExp False (valPred f) e e1 e2 where
   f = case op of
     OpEq -> (==)
     OpNEq -> (/=)
 
-interExp (EOrd e1 op e2) = binOpExp False (valPred f) e1 e2 where
+interExp e@(EOrd e1 op e2) = binOpExp False (valPred f) e e1 e2 where
   f = case op of
     OpLT -> (<)
     OpLEq -> (<=)
     OpGT -> (>)
     OpGEq -> (>=)
 
--- moze za pomoca identExp?
---interExp (EAss v op e) = do
---  transExp <- interExp e
---  mLoc <- asks (M.lookup v)
---  case mLoc of
---    Nothing -> varErrMonad
---    Just loc ->
---      let
---        newTrans val kp = (newCont fst, newCont snd) where
---        contExp rightVal = (\s ->
---          let oldVal = (s ! v)
---          in
+interExp context@(EAss v op e) = do
+  transExp <- interExp e
+  mLoc <- asks (M.lookup v . vEnv)
+  case mLoc of
+    Nothing -> varErrMonad v
+    Just loc ->
+      let
+        newTrans kpExp = transExp contExp where
+          (f, check) = case op of
+            OpAss -> ((\_ val -> val), False)
+            OpAddAss -> ((+?), False)
+            OpSubAss -> ((-?), False)
+            OpMulAss -> ((*?), False)
+            OpDivAss -> ((/?), True)
+            OpModAss -> ((%?), True)
+          contExp rightVal = if (check && rightVal == zero)
+            then divErrPair context
+            else (newCont fst, newCont snd) where
+              newCont selector s = selector (kpExp newVal) s' where
+                oldVal = (s ! loc)
+                newVal = f oldVal rightVal
+                s' = M.insert loc newVal s
+      in
+        return newTrans
+
+interExp (EIfte be e1 e2) = do
+  transBExp <- interExp be
+  transExp1 <- interExp e1
+  transExp2 <- interExp e2
+  return $ \kpE -> transBExp (\(VBool b) ->
+    if b then transExp1 kpE else transExp2 kpE)
 
 
 interExp (EInv op e) = do
@@ -327,14 +337,15 @@ interExp (EInv op e) = do
         newCont (VBool val) = kp (VBool (not val))
   return newTrans
 
-interExp e = errMonad msg where
-  msg = "Undefined yet: " ++ show e
 
-binOpExp :: Bool -> (Val -> Val -> Val) -> Exp -> Exp -> InterMonad ContPairExp
-binOpExp check f e1 e2 = do
+binOpExp :: Bool -> (Val -> Val -> Val) -> Exp -> Exp -> Exp -> InterMonad ContPairExp
+binOpExp check f contextExp e1 e2 = do
   transExp1 <- interExp e1
   transExp2 <- interExp e2
-  return $ (\kpE -> transExp1 (\val1 -> transExp2 (\val2 -> if (check && val2 == zero) then errTrans "Division by zero in " kpE else kpE (f val1 val2))))
+  return $ (\kpE -> transExp1 (\val1 -> transExp2 (\val2 ->
+    if (check && val2 == zero)
+      then divErrPair contextExp
+      else kpE (f val1 val2))))
 
 identExp :: (Val -> Val) -> (Val -> Val) -> Ident -> InterMonad ContPairExp
 identExp resultChange storeChange v = do
@@ -363,6 +374,9 @@ errTrans msg _ = (errCont msg, errCont msg)
 
 errMonad :: String -> InterMonad a
 errMonad msg = return $ errTrans msg
+
+divErrPair :: Exp -> (Cont, Cont)
+divErrPair context = errTrans ("Division by zero in " ++ printTree context) $ errCont ""
 
 scopeErrMonad :: String -> InterMonad a
 scopeErrMonad str = errMonad $ str ++ " not in scope"

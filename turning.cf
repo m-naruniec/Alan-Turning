@@ -63,7 +63,7 @@ EAnd. Exp2 ::= Exp2 "&&" Exp3 ; --ok
 
 EComp. Exp3 ::= Exp3 OpComp Exp4 ; --ok
 OpEq.  OpComp ::= "==" ; --ok
-OpNq. OpComp ::= "!=" ; --ok
+OpNEq. OpComp ::= "!=" ; --ok
 
 EOrd.  Exp4 ::= Exp4 OpOrd Exp5 ; --ok
 OpLT.  OpOrd ::= "<" ; --ok
@@ -86,8 +86,8 @@ OpNeg. OpInv ::= "-" ; --ok
 
 EVar.   Exp8 ::= Ident ; --ok
 EInt.   Exp8 ::= Integer ; --ok
-ETrue.  Exp8 ::= "true" ; --ok
-EFalse. Exp8 ::= "false" ; --ok
+ETrue.  Exp8 ::= "True" ; --ok
+EFalse. Exp8 ::= "False" ; --ok
 
 EPreOp.  Exp8 ::= OpPrePost Ident ; --ok
 EPostOp. Exp8 ::= Ident OpPrePost ; --ok

@@ -9,10 +9,10 @@ import Control.Monad (when)
 
 import LexTurning
 import ParTurning
-import SemTurning
 import PrintTurning
 import AbsTurning
-
+import SemTurning
+import TypeTurning
 
 
 
@@ -39,10 +39,13 @@ run v p s = let ts = myLLexer s in case p ts of
                           exitFailure
            Ok  tree -> do putStrLn "\nParse Successful!"
                           showTree v tree
-
-                          interpret tree
-
-                          exitSuccess
+                          b <- checkTypes tree
+                          if b
+                            then do
+                              interpret tree
+                              exitSuccess
+                            else
+                              exitFailure
 
 
 showTree :: (Show a, Print a) => Int -> a -> IO ()

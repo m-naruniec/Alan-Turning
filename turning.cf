@@ -7,11 +7,11 @@ Prog. Prog ::= Stmt ";" ;
 
 -- Declarations
 
-DSeq.  Decl  ::= Decl ";" Decl1; --ok
-DDflt. Decl1  ::= Type Ident ; --ok
-DVal.  Decl1  ::= Type Ident "=" Exp ; --ok
-DProc. Decl1  ::= "proc" Ident "(" [Param] ")" "{" Stmt ";" "}" ; --ok
-Param. Param ::= Type Ident ; --ok
+DSeq.  Decl  ::= Decl ";" Decl1;
+DDflt. Decl1  ::= Type Ident ;
+DVal.  Decl1  ::= Type Ident "=" Exp ;
+DProc. Decl1  ::= "proc" Ident "(" [Param] ")" "{" Stmt ";" "}" ;
+Param. Param ::= Type Ident ;
 
 separator  Param "," ;
 
@@ -24,22 +24,22 @@ TBool. Type ::= "bool" ;
 
 -- Statements
 
-SSeq.   Stmt ::= Stmt ";" Stmt1 ; --ok
+SSeq.   Stmt ::= Stmt ";" Stmt1 ;
 
-SLeft.  Stmt1 ::= "left" Stmt1 ; --ok
-SRight. Stmt1 ::= "right" Stmt1 ; --ok
+SLeft.  Stmt1 ::= "left" Stmt1 ;
+SRight. Stmt1 ::= "right" Stmt1 ;
 
-SSkip.  Stmt1 ::= "skip" ; --ok
-SIf.    Stmt1 ::= "if" "(" Exp ")" "{" Stmt ";" "}" ; --ok
-SIfte.  Stmt1 ::= "if" "(" Exp ")" "{" Stmt ";" "}" "else" "{" Stmt ";" "}" ; --ok
-STurn.  Stmt1 ::= "turn" ; --ok
-SExp.   Stmt1 ::= Exp ; --ok
-SPrint. Stmt1 ::= "print" Exp ; --ok
-SBlock. Stmt1 ::= "{" Decl ":" Stmt ";" "}" ; --ok
+SSkip.  Stmt1 ::= "skip" ;
+SIf.    Stmt1 ::= "if" "(" Exp ")" "{" Stmt ";" "}" ;
+SIfte.  Stmt1 ::= "if" "(" Exp ")" "{" Stmt ";" "}" "else" "{" Stmt ";" "}" ;
+STurn.  Stmt1 ::= "turn" ;
+SExp.   Stmt1 ::= Exp ;
+SPrint. Stmt1 ::= "print" Exp ;
+SBlock. Stmt1 ::= "{" Decl ":" Stmt ";" "}" ;
 
-SProc. Stmt1 ::= Ident "(" [Arg] ")" ; --ok
-AVal.  Arg  ::= Exp ; --ok
-ARef.  Arg  ::= "ref" Ident ; --ok
+SProc. Stmt1 ::= Ident "(" [Arg] ")" ;
+AVal.  Arg  ::= Exp ;
+ARef.  Arg  ::= "ref" Ident ;
 
 separator Arg "," ;
 
@@ -57,42 +57,42 @@ OpModAss. OpAss ::= "%=" ;
 
 EIfte. Exp ::= Exp1 "?" Exp ":" Exp1 ;
 
-EOr.  Exp1 ::= Exp1 "||" Exp2 ; --ok
+EOr.  Exp1 ::= Exp1 "||" Exp2 ;
 
-EAnd. Exp2 ::= Exp2 "&&" Exp3 ; --ok
+EAnd. Exp2 ::= Exp2 "&&" Exp3 ;
 
-EComp. Exp3 ::= Exp3 OpComp Exp4 ; --ok
-OpEq.  OpComp ::= "==" ; --ok
-OpNEq. OpComp ::= "!=" ; --ok
+EComp. Exp3 ::= Exp3 OpComp Exp4 ;
+OpEq.  OpComp ::= "==" ;
+OpNEq. OpComp ::= "!=" ;
 
-EOrd.  Exp4 ::= Exp4 OpOrd Exp5 ; --ok
-OpLT.  OpOrd ::= "<" ; --ok
-OpLEq. OpOrd ::= "<=" ; --ok
-OpGT.  OpOrd ::= ">" ; --ok
-OpGEq. OpOrd ::= ">=" ; --ok
+EOrd.  Exp4 ::= Exp4 OpOrd Exp5 ;
+OpLT.  OpOrd ::= "<" ;
+OpLEq. OpOrd ::= "<=" ;
+OpGT.  OpOrd ::= ">" ;
+OpGEq. OpOrd ::= ">=" ;
 
-EAdd.    Exp5 ::= Exp5 OpAdd Exp6 ; --ok
-OpPlus.  OpAdd ::= "+" ; --ok
-OpMinus. OpAdd ::= "-" ; --ok
+EAdd.    Exp5 ::= Exp5 OpAdd Exp6 ;
+OpPlus.  OpAdd ::= "+" ;
+OpMinus. OpAdd ::= "-" ;
 
-EMul.    Exp6 ::= Exp6 OpMul Exp7 ; --ok
-OpTimes. OpMul ::= "*" ; --ok
-OpDiv.   OpMul ::= "/" ; --ok
-OpMod.   OpMul ::= "%" ; --ok
+EMul.    Exp6 ::= Exp6 OpMul Exp7 ;
+OpTimes. OpMul ::= "*" ;
+OpDiv.   OpMul ::= "/" ;
+OpMod.   OpMul ::= "%" ;
 
-EInv.  Exp7 ::= OpInv Exp8 ; --ok
-OpNot. OpInv ::= "!" ; --ok
-OpNeg. OpInv ::= "-" ; --ok
+EInv.  Exp7 ::= OpInv Exp8 ;
+OpNot. OpInv ::= "!" ;
+OpNeg. OpInv ::= "-" ;
 
-EVar.   Exp8 ::= Ident ; --ok
-EInt.   Exp8 ::= Integer ; --ok
-ETrue.  Exp8 ::= "True" ; --ok
-EFalse. Exp8 ::= "False" ; --ok
+EVar.   Exp8 ::= Ident ;
+EInt.   Exp8 ::= Integer ;
+ETrue.  Exp8 ::= "True" ;
+EFalse. Exp8 ::= "False" ;
 
-EPreOp.  Exp8 ::= OpPrePost Ident ; --ok
-EPostOp. Exp8 ::= Ident OpPrePost ; --ok
-OpInc.   OpPrePost ::= "++" ; --ok
-OpDec.   OpPrePost ::= "--" ; --ok
+EPreOp.  Exp8 ::= OpPrePost Ident ;
+EPostOp. Exp8 ::= Ident OpPrePost ;
+OpInc.   OpPrePost ::= "++" ;
+OpDec.   OpPrePost ::= "--" ;
 
 coercions Exp 8 ;
 

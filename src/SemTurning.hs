@@ -73,13 +73,13 @@ type ContPairExp = Val -> ContPair
 type ContPairDecl = Env -> ContPair
 type ContPair = (Cont, Cont)
 type Cont = Store -> Ans
-type Ans = ExceptT String IO () -- FIXME
+type Ans = ExceptT String IO ()
 
 type Trans a = a -> ContPair
 
 type InterMonad a = Reader Env (Trans a)
 
--- TODO remove test structures
+-- TODO remove temporary test structures
 interpret :: Prog -> IO ()
 interpret (Prog stmt) = resultIO where
   resultMonad :: InterMonad ContPair
@@ -376,7 +376,8 @@ errMonad :: String -> InterMonad a
 errMonad msg = return $ errTrans msg
 
 divErrPair :: Exp -> (Cont, Cont)
-divErrPair context = errTrans ("Division by zero in " ++ printTree context) $ errCont ""
+divErrPair context =
+  errTrans ("Division by zero in " ++ printTree context) $ errCont ""
 
 scopeErrMonad :: String -> InterMonad a
 scopeErrMonad str = errMonad $ str ++ " not in scope"

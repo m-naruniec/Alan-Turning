@@ -2,7 +2,7 @@
 module Main where
 
 
-import System.IO ( stdin, hGetContents )
+import System.IO ( stdin, stderr, hGetContents, hPutStrLn )
 import System.Environment ( getArgs, getProgName )
 import System.Exit ( exitFailure, exitSuccess )
 import Control.Monad (when)
@@ -25,20 +25,20 @@ myLLexer = myLexer
 type Verbosity = Int
 
 putStrV :: Verbosity -> String -> IO ()
-putStrV v s = when (v > 1) $ putStrLn s
+putStrV v s = when (v > 1) $ hPutStrLn stderr s
 
 runFile :: Verbosity -> ParseFun Prog -> FilePath -> IO ()
 runFile v p f = putStrLn f >> readFile f >>= run v p
 
 run ::  Verbosity -> ParseFun Prog -> String -> IO ()
 run v p s = let ts = myLLexer s in case p ts of
-           Bad s    -> do putStrLn "\nParse              Failed...\n"
-                          putStrV v "Tokens:"
-                          putStrV v $ show ts
-                          putStrLn s
+           Bad s    -> do hPutStrLn stderr "\nParse Failed...\n"
+                          --putStrV v "Tokens:"
+                          --putStrV v $ show ts
+                          --kPutStrLn stderr s
                           exitFailure
-           Ok  tree -> do putStrLn "\nParse Successful!"
-                          showTree v tree
+           Ok  tree -> do --putStrLn "\nParse Successful!"
+                          --showTree v tree
                           b <- checkTypes tree
                           if b
                             then do

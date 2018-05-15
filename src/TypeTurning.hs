@@ -1,5 +1,6 @@
 module TypeTurning where
 
+import System.IO (stderr, hPutStrLn)
 import AbsTurning
 import ErrM
 import PrintTurning
@@ -26,8 +27,8 @@ checkTypes :: Prog -> IO Bool
 checkTypes (Prog stmt) = resultIO where
   eitherResult = runExcept $ runReaderT (checkStmt stmt) startEnv
   resultIO = case eitherResult of
-    (Left str) -> putStrLn str >> return False
-    otherwise -> putStrLn "type check succesfull" >> return True
+    (Left str) -> hPutStrLn stderr str >> return False
+    otherwise -> return True
 
   startEnv :: Env
   startEnv = Env M.empty M.empty

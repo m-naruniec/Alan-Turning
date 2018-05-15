@@ -1,5 +1,6 @@
 module SemTurning where
 
+import System.IO (stderr, hPutStrLn)
 import AbsTurning
 import ErrM
 import PrintTurning
@@ -93,7 +94,7 @@ interpret (Prog stmt) = resultIO where
     resultCont = snd $ trans (startCont, startCont)
     resultExcept :: Ans
     resultExcept = (resultCont testStartStore) `catchError` errorHandler
-    errorHandler str = liftIO (putStrLn str)
+    errorHandler str = liftIO (hPutStrLn stderr str)
     result = (runExceptT resultExcept) >> return ()
 
   startCont :: Cont

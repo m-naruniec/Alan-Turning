@@ -1,0 +1,5 @@
+# should be enclosed in a block
+
+int x;
+:
+print x;

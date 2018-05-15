@@ -1,0 +1,38 @@
+/* returns -1 for negative n,
+   n! otherwise */
+
+{
+  # yes it's overcomplicated
+  // but showcases the language's functionality
+  int n = 4;
+
+  proc runFact(bool success, int n) {{
+    proc fact(int result, int n) {
+      if (n == 0) {
+        result = 1;
+      } else {
+        fact (ref result, n - 1);
+        result *= n;
+      };
+    };
+
+    int result = 1;
+    :
+    if (n >= 0) {
+      fact(ref result, n);
+      n = result;
+      success = True;
+    } else {
+      success = False;
+    };
+  };};
+
+  :
+  {
+    bool success;
+    :
+    runFact(ref success, ref n);
+    print(success ? n : -1);
+  };
+};
+

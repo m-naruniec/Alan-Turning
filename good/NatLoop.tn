@@ -1,0 +1,9 @@
+// prints all natural numbers in a loop
+{
+  int zero;
+  :
+  left turn;
+  print zero++;
+  turn;
+}
+

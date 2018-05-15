@@ -1,0 +1,25 @@
+/* showcases arithmetic expressions */
+{
+  int a = 7;
+  int a = a + 5;
+  bool b = -a == 5 ? False : True;
+  bool b = b == False;
+  :
+  print a += 1;
+  print a -= 6;
+  print a /= 3;
+  print a *= 7;
+  print a %= 8;
+  print a--;
+  print --a;
+  print a++;
+  print ++a;
+  print b;
+  print !b;
+  print b && False;
+  print b && True;
+  print b || True;
+  print b || !True;
+  print b || !(!True);
+}
+

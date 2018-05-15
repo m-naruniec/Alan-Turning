@@ -1,0 +1,29 @@
+# finds greatest common divisor of x and y
+{
+  int x = 42;
+  int y = 12;
+  proc gcd (int result, int a, int b) {
+    {
+      int c;
+      :
+      left turn;
+      if (b != 0) {
+        right (
+          c = a % b;
+          a = b;
+          b = c
+        );
+        turn;
+      };
+      result = a;
+    };
+  };
+  :
+  {
+    int result;
+    :
+    gcd(ref result, x, y);
+    print result;
+  };
+}
+

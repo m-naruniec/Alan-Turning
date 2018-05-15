@@ -1,0 +1,8 @@
+{
+  proc p(int x, bool b) {
+    print b;
+  };
+  :
+  p(6, 7);
+}
+

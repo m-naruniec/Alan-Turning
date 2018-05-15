@@ -1,0 +1,10 @@
+{
+  bool a;
+  proc p (int x, bool b) {
+    print x;
+    print b;
+  };
+  :
+  p(ref a);
+}
+

@@ -125,8 +125,9 @@ checkExp (EAnd e1 e2) = checkBin TBool e1 e2
 checkExp (EComp e1 _ e2) = do
   t <- checkExp e1
   assert t e2
+  return TBool
 
-checkExp (EOrd e1 _ e2) = checkBin TInt e1 e2
+checkExp (EOrd e1 _ e2) = checkBin TInt e1 e2 >> return TBool
 
 checkExp (EAdd e1 _ e2) = checkBin TInt e1 e2
 
@@ -197,7 +198,7 @@ typeErrMonad expected actual e = errMonad $ unlines
 argsErrMonad :: Int -> Int -> Stmt -> TypeMonad a
 argsErrMonad expected actual stmt = errMonad $ unlines
   ["Type error:",
-  "expected " ++ show expected ++ " arguments, but received " ++ show expected,
+  "expected " ++ show expected ++ " arguments, but received " ++ show actual,
   "in statement:",
   printTree stmt]
 

@@ -35,7 +35,7 @@ SIfte.  Stmt1 ::= "if" "(" Exp ")" "{" Stmt ";" "}" "else" "{" Stmt ";" "}" ;
 STurn.  Stmt1 ::= "turn" ;
 SExp.   Stmt1 ::= Exp ;
 SPrint. Stmt1 ::= "print" Exp ;
-SBlock. Stmt1 ::= "{" Decl ":" Stmt ";" "}" ;
+SBlock. Stmt1 ::= "{" Decl ";" ":" Stmt ";" "}" ;
 
 SProc. Stmt1 ::= Ident "(" [Arg] ")" ;
 AVal.  Arg  ::= Exp ;

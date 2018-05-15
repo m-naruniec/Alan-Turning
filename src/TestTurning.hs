@@ -2,17 +2,17 @@
 module Main where
 
 
-import System.IO ( stdin, stderr, hGetContents, hPutStrLn )
+import System.IO ( stdin, hGetContents )
 import System.Environment ( getArgs, getProgName )
 import System.Exit ( exitFailure, exitSuccess )
 import Control.Monad (when)
 
 import LexTurning
 import ParTurning
+import SkelTurning
 import PrintTurning
 import AbsTurning
-import SemTurning
-import TypeTurning
+
 
 
 
@@ -25,27 +25,22 @@ myLLexer = myLexer
 type Verbosity = Int
 
 putStrV :: Verbosity -> String -> IO ()
-putStrV v s = when (v > 1) $ hPutStrLn stderr s
+putStrV v s = when (v > 1) $ putStrLn s
 
-runFile :: Verbosity -> ParseFun Prog -> FilePath -> IO ()
-runFile v p f = {-putStrLn f >>-} readFile f >>= run v p
+runFile :: (Print a, Show a) => Verbosity -> ParseFun a -> FilePath -> IO ()
+runFile v p f = putStrLn f >> readFile f >>= run v p
 
-run ::  Verbosity -> ParseFun Prog -> String -> IO ()
+run :: (Print a, Show a) => Verbosity -> ParseFun a -> String -> IO ()
 run v p s = let ts = myLLexer s in case p ts of
-           Bad s    -> do hPutStrLn stderr "\nParse Failed...\n"
+           Bad s    -> do putStrLn "\nParse              Failed...\n"
                           putStrV v "Tokens:"
                           putStrV v $ show ts
-                          hPutStrLn stderr s
+                          putStrLn s
                           exitFailure
-           Ok  tree -> do --putStrLn "\nParse Successful!"
-                          --showTree v tree
-                          b <- checkTypes tree
-                          if b
-                            then do
-                              interpret tree
-                              exitSuccess
-                            else
-                              exitFailure
+           Ok  tree -> do putStrLn "\nParse Successful!"
+                          showTree v tree
+
+                          exitSuccess
 
 
 showTree :: (Show a, Print a) => Int -> a -> IO ()

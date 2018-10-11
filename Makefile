@@ -1,11 +1,10 @@
 all:
-	mkdir build;\
+	mkdir build
 	cd build;\
 	cp ../src/* . ;\
 	happy -gca ParTurning.y;\
 	alex -g LexTurning.x;\
 	ghc --make interpreter.hs -o interpreter
-	cp build/interpreter .
 
 clean:
 	cd build;\

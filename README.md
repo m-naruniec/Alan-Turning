@@ -47,7 +47,7 @@ Although the course for which it was created finished, Turning still may be deve
 
 * add more data dypes - strings, arrays, structs,
 * change the main interpreting monad - there might be a better monad combination for the purpose of the language. It would probably involve Cont monad and possibly List, instead of manually written pair of continuations,
-* remove recurency from functions - this forces the use of turn, which is the whole challenge and fun in the language.
+* remove recurrence from functions - this forces the use of turn, which is the whole challenge and fun in the language.
 
 
 
